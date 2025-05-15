@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
 </head>
 <body>
   <h1>StreamGuard - YouTube Bot Detection</h1>
@@ -24,9 +23,21 @@
   <h2>Requirements</h2>
   <ul>
     <li>Python 3.8 or later</li>
-    <li>Google API Client Library for Python (`google-api-python-client`)</li>
+    <li>Google API Client Library for Python (<code>google-api-python-client</code>)</li>
     <li>YouTube Data API v3 Key</li>
   </ul>
+
+  <h2>Getting a YouTube Data API Key</h2>
+  <p>
+    To use this script, you need to obtain a YouTube Data API v3 key. Follow these steps:
+  </p>
+  <ol>
+    <li>Go to the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>.</li>
+    <li>Create a new project or select an existing one.</li>
+    <li>Enable the YouTube Data API v3 under "APIs & Services".</li>
+    <li>Navigate to "Credentials" and create an API key.</li>
+    <li>Use this key in the <code>API_KEY</code> configuration of the script.</li>
+  </ol>
 
   <h2>Installation</h2>
   <pre><code>pip install google-api-python-client</code></pre>
@@ -62,3 +73,4 @@
   </footer>
 </body>
 </html>
+
