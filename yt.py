@@ -2,75 +2,69 @@ import os
 import json
 import time
 import logging
+import threading
+import requests
 from datetime import datetime, timezone
+from io import BytesIO
+from tkinter import Tk, Label, Text, Scrollbar, Frame, RIGHT, LEFT, Y, BOTH, END, TOP
+from PIL import Image, ImageTk
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-# Configuration
-API_KEY = 'API-KEY'
-CHANNEL_ID = 'yt_channel_id'
-DATA_LOG_FILE = os.path.join(os.path.dirname(__file__), 'stream_analysis_log.json')
-CHAT_COLLECTION_DURATION_SEC = 30
-BOT_ESTIMATION_INTERVAL_SEC = 60
-LURKER_ADJUSTMENT_FACTOR = 0.25
-MIN_CHAT_VIEWER_RATIO_FOR_PRIMARY_ESTIMATION = 0.02
-SUSPICIOUSLY_HIGH_MESSAGE_COUNT_PER_USER = 10
+API_KEY = 'API_KEY'
+CHANNEL_ID = 'UCoxFxZirbfLvy9tres71eSA'
+CHAT_DURATION = 30
+INTERVAL = 60
+LOG_FILE = 'stream_analysis_log.json'
 
-# Initialize logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s',
+                    handlers=[logging.StreamHandler()])
 
-# YouTube client
-youtube = build('youtube', 'v3', developerKey=API_KEY)
+youtube = build('youtube', 'v3', developerKey=API_KEY, cache_discovery=False)
 
-def get_live_stream_id(channel_id):
+def get_channel_info(channel_id):
     try:
-        res = youtube.search().list(
-            part='id',
-            channelId=channel_id,
-            eventType='live',
-            type='video',
-            maxResults=1
-        ).execute()
+        res = youtube.channels().list(part='snippet', id=channel_id).execute()
+        items = res.get('items', [])
+        if items:
+            snippet = items[0]['snippet']
+            return snippet['title'], snippet['thumbnails']['default']['url']
+    except HttpError as e:
+        logging.error(f"Failed to fetch channel info: {e}")
+    return None, None
 
+def get_live_stream_id():
+    try:
+        res = youtube.search().list(part='id', channelId=CHANNEL_ID, eventType='live', type='video').execute()
         items = res.get('items', [])
         if items:
             return items[0]['id']['videoId']
-        return None
     except HttpError as e:
-        logging.error(f"Error fetching live stream ID: {e}")
-        return None
+        logging.error(f"Failed to get live stream ID: {e}")
+    return None
 
 def get_stream_stats(video_id):
     try:
-        res = youtube.videos().list(
-            part='liveStreamingDetails,statistics',
-            id=video_id
-        ).execute()
-
+        res = youtube.videos().list(part='liveStreamingDetails,statistics', id=video_id).execute()
         items = res.get('items', [])
         if not items:
-            logging.warning(f"No video details found for ID {video_id}")
             return None
-
-        video = items[0]
-        stats = video.get('statistics', {})
-        details = video.get('liveStreamingDetails', {})
-
+        data = items[0]
+        stats = data.get('statistics', {})
+        details = data.get('liveStreamingDetails', {})
         return {
             'concurrentViewers': int(details.get('concurrentViewers', 0)),
             'activeChatId': details.get('activeLiveChatId')
         }
     except HttpError as e:
-        logging.error(f"Error fetching stats for {video_id}: {e}")
-        return None
+        logging.error(f"Failed to get stream stats: {e}")
+    return None
 
-def get_chat_analysis(chat_id, duration_sec):
+def get_chat_analysis(chat_id, duration):
     unique_authors = {}
     total_messages = 0
     next_page_token = None
-    end_time = time.time() + duration_sec
-
-    logging.info(f"Collecting chat messages from chat ID {chat_id}...")
+    end_time = time.time() + duration
 
     while time.time() < end_time:
         try:
@@ -81,151 +75,134 @@ def get_chat_analysis(chat_id, duration_sec):
                 maxResults=200
             ).execute()
 
-            items = res.get('items', [])
-            for item in items:
+            for item in res.get('items', []):
                 total_messages += 1
                 author_id = item['authorDetails']['channelId']
                 if author_id not in unique_authors:
-                    unique_authors[author_id] = {
-                        'messageCount': 1,
-                        'isModerator': item['authorDetails'].get('isChatModerator', False),
-                        'isOwner': item['authorDetails'].get('isChatOwner', False),
-                    }
+                    unique_authors[author_id] = 1
                 else:
-                    unique_authors[author_id]['messageCount'] += 1
+                    unique_authors[author_id] += 1
 
             next_page_token = res.get('nextPageToken')
             time.sleep(min(res.get('pollingIntervalMillis', 2000) / 1000.0, end_time - time.time()))
-
         except HttpError as e:
-            logging.error(f"Error fetching chat messages: {e}")
+            logging.error(f"Chat fetch error: {e}")
             break
 
-    suspicious_count = sum(1 for a in unique_authors.values()
-                           if a['messageCount'] > SUSPICIOUSLY_HIGH_MESSAGE_COUNT_PER_USER and not a['isModerator'] and not a['isOwner'])
-
     return {
-        'uniqueChatterCount': len(unique_authors),
-        'totalMessagesCollected': total_messages,
-        'averageMessagesPerChatter': total_messages / len(unique_authors) if unique_authors else 0,
-        'potentiallySuspiciousChatters': suspicious_count
+        'uniqueChatters': len(unique_authors),
+        'totalMessages': total_messages,
+        'avgMessages': total_messages / len(unique_authors) if unique_authors else 0
     }
 
-def estimate_viewers(concurrent_viewers, chat_analysis):
-    if concurrent_viewers <= 0:
-        return {
-            'estimatedRealViewers': 0,
-            'estimatedBotViewers': 0,
-            'estimationMethod': 'No concurrent viewers',
-            'rawChatToViewerRatio': 0,
-            'adjustedChatToViewerRatio': 0
-        }
-
-    unique = chat_analysis['uniqueChatterCount']
-    suspicious = chat_analysis['potentiallySuspiciousChatters']
-    adjusted = max(0, unique - suspicious)
-    raw_ratio = unique / concurrent_viewers
-    adjusted_ratio = adjusted / concurrent_viewers if concurrent_viewers > 0 else 0
-
-    if adjusted == 0:
-        real = 0
-        method = "No reliable chatters"
-    elif adjusted_ratio >= MIN_CHAT_VIEWER_RATIO_FOR_PRIMARY_ESTIMATION:
-        real = round(adjusted / LURKER_ADJUSTMENT_FACTOR)
-        method = f"Lurker Factor ({LURKER_ADJUSTMENT_FACTOR})"
-    else:
-        real = round(concurrent_viewers * adjusted_ratio)
-        method = "Fallback Ratio"
-
-    real = min(max(real, adjusted), concurrent_viewers)
-    bots = max(0, concurrent_viewers - real)
+def estimate_bots(viewers, chat_stats):
+    unique = chat_stats['uniqueChatters']
+    raw_ratio = unique / viewers if viewers > 0 else 0
+    estimated_real = round(unique / 0.25) if raw_ratio >= 0.02 else round(viewers * raw_ratio)
+    estimated_real = min(estimated_real, viewers)
+    estimated_bots = max(0, viewers - estimated_real)
 
     return {
-        'estimatedRealViewers': real,
-        'estimatedBotViewers': bots,
-        'estimationMethod': method,
-        'rawChatToViewerRatio': round(raw_ratio, 4),
-        'adjustedChatToViewerRatio': round(adjusted_ratio, 4)
+        'estimatedRealViewers': estimated_real,
+        'estimatedBotViewers': estimated_bots,
+        'chatToViewerRatio': round(raw_ratio, 4)
     }
 
-def log_to_file(data):
-    if os.path.exists(DATA_LOG_FILE):
-        with open(DATA_LOG_FILE, 'r', encoding='utf-8') as f:
+class LiveBotGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("YouTube Bot Detection Dashboard")
+        self.root.configure(bg='#1e1e1e')
+
+        self.header = Frame(root, bg='#1e1e1e')
+        self.header.pack(side=TOP, pady=10)
+
+        try:
+            pepe_data = requests.get("https://i.ibb.co/RXn09Xj/pepe-hacker.png").content
+            pepe_img = Image.open(BytesIO(pepe_data)).resize((64, 64))
+            self.pepe_photo = ImageTk.PhotoImage(pepe_img)
+            pepe_label = Label(self.header, image=self.pepe_photo, bg='#1e1e1e')
+            pepe_label.pack(side=TOP, pady=(0, 10))
+        except Exception as e:
+            logging.warning(f"Could not load pepe image: {e}")
+
+        self.profile_label = Label(self.header, bg='#1e1e1e')
+        self.profile_label.pack(side=LEFT, padx=10)
+
+        self.info_label = Label(self.header, text="Loading channel info...", fg='white', bg='#1e1e1e', font=('Arial', 12), justify=LEFT)
+        self.info_label.pack(side=LEFT)
+
+        self.text_area = Text(root, bg='#252526', fg='white', insertbackground='white', wrap='word', font=('Consolas', 10))
+        self.text_area.pack(side=LEFT, fill=BOTH, expand=True)
+
+        scrollbar = Scrollbar(root, command=self.text_area.yview)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        self.text_area.config(yscrollcommand=scrollbar.set)
+
+        # Start loading channel info in background
+        threading.Thread(target=self.load_channel_image, daemon=True).start()
+        # Start updating data in background
+        threading.Thread(target=self.update_data, daemon=True).start()
+
+    def load_channel_image(self):
+        title, url = get_channel_info(CHANNEL_ID)
+        if title:
+            self.info_label.config(text=f"{title}\nChannel ID: {CHANNEL_ID}")
+        else:
+            self.info_label.config(text=f"Channel ID: {CHANNEL_ID}")
+
+        if url:
             try:
-                log = json.load(f)
-                if not isinstance(log, list):
-                    log = []
-            except json.JSONDecodeError:
-                log = []
-    else:
-        log = []
+                img_data = requests.get(url).content
+                img = Image.open(BytesIO(img_data)).resize((48, 48))
+                photo = ImageTk.PhotoImage(img)
+                # Tkinter updates must be done on main thread:
+                self.root.after(0, lambda: self.profile_label.config(image=photo))
+                self.profile_label.image = photo
+            except Exception as e:
+                logging.warning(f"Could not load image: {e}")
 
-    log.append(data)
+    def log(self, message):
+        self.text_area.insert(END, f"{message}\n")
+        self.text_area.see(END)
 
-    with open(DATA_LOG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(log, f, indent=2)
+    def update_data(self):
+        while True:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            self.root.after(0, lambda: self.log(f"[{timestamp}] Starting analysis..."))
 
-def run_detection_loop():
-    logging.info("Starting YouTube Live Stream Bot Detection")
-    logging.info(f"Channel ID: {CHANNEL_ID}")
-    logging.info(f"Interval: {BOT_ESTIMATION_INTERVAL_SEC}s | Chat Duration: {CHAT_COLLECTION_DURATION_SEC}s")
-    logging.info(f"Log File: {DATA_LOG_FILE}\n")
+            video_id = get_live_stream_id()
+            if not video_id:
+                self.root.after(0, lambda: self.log("No active live stream found."))
+                time.sleep(INTERVAL)
+                continue
 
-    while True:
-        timestamp = datetime.now(timezone.utc).isoformat()
-        logging.info(f"[{timestamp}] Starting analysis...")
+            stats = get_stream_stats(video_id)
+            if not stats:
+                self.root.after(0, lambda: self.log("Stream stats unavailable."))
+                time.sleep(INTERVAL)
+                continue
 
-        video_id = get_live_stream_id(CHANNEL_ID)
-        if not video_id:
-            logging.info("No active live stream found.")
-            time.sleep(BOT_ESTIMATION_INTERVAL_SEC)
-            continue
+            chat_stats = get_chat_analysis(stats['activeChatId'], CHAT_DURATION)
+            estimates = estimate_bots(stats['concurrentViewers'], chat_stats)
 
-        stats = get_stream_stats(video_id)
-        if not stats:
-            logging.info("Failed to get stream stats.")
-            time.sleep(BOT_ESTIMATION_INTERVAL_SEC)
-            continue
-
-        if not stats.get('activeChatId'):
-            logging.info("No chat ID found. Estimating all as bots.")
             result = {
                 'timestamp': timestamp,
-                'channelId': CHANNEL_ID,
-                'videoId': video_id,
                 'concurrentViewers': stats['concurrentViewers'],
-                'uniqueChatterCount': 0,
-                'totalMessagesCollected': 0,
-                'averageMessagesPerChatter': 0,
-                'potentiallySuspiciousChatters': 0,
-                'estimatedRealViewers': 0,
-                'estimatedBotViewers': stats['concurrentViewers'],
-                'rawChatToViewerRatio': 0,
-                'adjustedChatToViewerRatio': 0,
-                'estimationMethod': 'No chat available'
+                **chat_stats,
+                **estimates
             }
-            log_to_file(result)
-            time.sleep(BOT_ESTIMATION_INTERVAL_SEC)
-            continue
 
-        chat_analysis = get_chat_analysis(stats['activeChatId'], CHAT_COLLECTION_DURATION_SEC)
-        estimates = estimate_viewers(stats['concurrentViewers'], chat_analysis)
+            with open(LOG_FILE, 'a') as f:
+                f.write(json.dumps(result) + '\n')
 
-        result = {
-            'timestamp': timestamp,
-            'channelId': CHANNEL_ID,
-            'videoId': video_id,
-            'concurrentViewers': stats['concurrentViewers'],
-            **chat_analysis,
-            **estimates
-        }
+            log_message = (f"Viewers: {stats['concurrentViewers']}, Real: {estimates['estimatedRealViewers']}, "
+                           f"Bots: {estimates['estimatedBotViewers']}, Ratio: {estimates['chatToViewerRatio']}")
+            self.root.after(0, lambda msg=log_message: self.log(msg))
 
-        logging.info(f"[{timestamp}] Real: {estimates['estimatedRealViewers']}, Bots: {estimates['estimatedBotViewers']} ({estimates['estimationMethod']})")
-        log_to_file(result)
-        time.sleep(BOT_ESTIMATION_INTERVAL_SEC)
+            time.sleep(INTERVAL)
 
-if __name__ == "__main__":
-    try:
-        run_detection_loop()
-    except KeyboardInterrupt:
-        logging.info("Shutting down.")
+if __name__ == '__main__':
+    root = Tk()
+    app = LiveBotGUI(root)
+    root.mainloop()
