@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StreamGuard - YouTube Bot Detection</title>
 </head>
 <body>
   <h1>StreamGuard - YouTube Bot Detection</h1>
@@ -18,6 +19,8 @@
     <li>Detects suspicious chat activity indicating potential bots.</li>
     <li>Estimates real viewers and bots based on chat-to-viewer ratios.</li>
     <li>Logs analysis results in a JSON file for further inspection.</li>
+    <li><strong>Immediate GUI popup:</strong> The graphical interface launches instantly without waiting for data fetching.</li>
+    <li><strong>Background data loading:</strong> Channel info and stream statistics load asynchronously in separate threads, ensuring a responsive UI.</li>
   </ul>
 
   <h2>Requirements</h2>
@@ -25,6 +28,7 @@
     <li>Python 3.8 or later</li>
     <li>Google API Client Library for Python (<code>google-api-python-client</code>)</li>
     <li>YouTube Data API v3 Key</li>
+    <li>Additional dependencies: <code>requests</code>, <code>Pillow</code> (PIL fork)</li>
   </ul>
 
   <h2>Getting a YouTube Data API Key</h2>
@@ -40,7 +44,7 @@
   </ol>
 
   <h2>Installation</h2>
-  <pre><code>pip install google-api-python-client</code></pre>
+  <pre><code>pip install google-api-python-client requests Pillow</code></pre>
 
   <h2>Usage</h2>
   <ol>
@@ -58,8 +62,17 @@
   <ul>
     <li><code>API_KEY</code>: Your YouTube Data API v3 key.</li>
     <li><code>CHANNEL_ID</code>: The YouTube channel ID to monitor.</li>
-    <li><code>CHAT_COLLECTION_DURATION_SEC</code>: Duration in seconds to collect chat messages during each analysis.</li>
-    <li><code>BOT_ESTIMATION_INTERVAL_SEC</code>: Time interval between bot detection runs.</li>
+    <li><code>CHAT_DURATION</code>: Duration (seconds) to collect chat messages during each analysis cycle.</li>
+    <li><code>INTERVAL</code>: Time interval (seconds) between consecutive bot detection runs.</li>
+  </ul>
+
+  <h2>Implementation Details</h2>
+  <p>The updated script now:</p>
+  <ul>
+    <li>Launches the GUI window immediately on start without delay.</li>
+    <li>Loads channel thumbnail and name in a background thread, updating the interface once available.</li>
+    <li>Runs the live chat analysis and viewer estimation in a background thread, logging results and updating the GUI asynchronously.</li>
+    <li>Uses <code>threading.Thread</code> and <code>Tkinter's root.after()</code> to safely update UI from background threads.</li>
   </ul>
 
   <h2>License</h2>
@@ -73,4 +86,5 @@
   </footer>
 </body>
 </html>
+
 
