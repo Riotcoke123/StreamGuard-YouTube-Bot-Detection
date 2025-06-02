@@ -1,47 +1,13 @@
 [
-  {
-    "timestamp": "2025-06-01T03:39:06.409318+00:00",
-    "channelId": "UCoxFxZirbfLvy9tres71eSA",
-    "videoId": "zEce1PF7aIQ",
-    "concurrentViewers": 577,
-    "uniqueChatterCount": 44,
-    "totalMessagesCollected": 101,
-    "averageMessagesPerChatter": 2.2954545454545454,
-    "potentiallySuspiciousChatters": 1,
-    "estimatedRealViewers": 172,
-    "estimatedBotViewers": 405,
-    "estimationMethod": "Lurker Factor (0.25)",
-    "rawChatToViewerRatio": 0.0763,
-    "adjustedChatToViewerRatio": 0.0745
-  },
-  {
-    "timestamp": "2025-06-01T03:42:29.477615+00:00",
-    "channelId": "UCoxFxZirbfLvy9tres71eSA",
-    "videoId": "zEce1PF7aIQ",
-    "concurrentViewers": 839,
-    "uniqueChatterCount": 50,
-    "totalMessagesCollected": 81,
-    "averageMessagesPerChatter": 1.62,
-    "potentiallySuspiciousChatters": 0,
-    "estimatedRealViewers": 200,
-    "estimatedBotViewers": 639,
-    "estimationMethod": "Lurker Factor (0.25)",
-    "rawChatToViewerRatio": 0.0596,
-    "adjustedChatToViewerRatio": 0.0596
-  },
-  {
-    "timestamp": "2025-06-01T03:44:00.464866+00:00",
-    "channelId": "UCoxFxZirbfLvy9tres71eSA",
-    "videoId": "zEce1PF7aIQ",
-    "concurrentViewers": 497,
-    "uniqueChatterCount": 48,
-    "totalMessagesCollected": 85,
-    "averageMessagesPerChatter": 1.7708333333333333,
-    "potentiallySuspiciousChatters": 0,
-    "estimatedRealViewers": 192,
-    "estimatedBotViewers": 305,
-    "estimationMethod": "Lurker Factor (0.25)",
-    "rawChatToViewerRatio": 0.0966,
-    "adjustedChatToViewerRatio": 0.0966
-  }
+  {"timestamp": "Jun 02 08:39 PM", "concurrentViewers": 7734, "uniqueChatters": 77, "totalMessages": 93, "avgMessages": 1.2077922077922079, "estimatedRealViewers": 77, "estimatedBotViewers": 7657, "chatToViewerRatio": 0.01},
+  {"timestamp": "Jun 02 08:44 PM", "concurrentViewers": 6477, "uniqueChatters": 73, "totalMessages": 85, "avgMessages": 1.1643835616438356, "estimatedRealViewers": 73, "estimatedBotViewers": 6404, "chatToViewerRatio": 0.0113},
+  {"timestamp": "Jun 02 08:46 PM", "concurrentViewers": 6470, "uniqueChatters": 80, "totalMessages": 96, "avgMessages": 1.2, "estimatedRealViewers": 80, "estimatedBotViewers": 6390, "chatToViewerRatio": 0.0124},
+  {"timestamp": "Jun 02 08:46 PM", "concurrentViewers": 6547, "uniqueChatters": 71, "totalMessages": 82, "avgMessages": 1.1549295774647887, "estimatedRealViewers": 71, "estimatedBotViewers": 6476, "chatToViewerRatio": 0.0108},
+  {"timestamp": "Jun 02 08:48 PM", "concurrentViewers": 6629, "uniqueChatters": 71, "totalMessages": 79, "avgMessages": 1.1126760563380282, "estimatedRealViewers": 71, "estimatedBotViewers": 6558, "chatToViewerRatio": 0.0107},
+  {"timestamp": "Jun 02 08:49 PM", "concurrentViewers": 6536, "uniqueChatters": 78, "totalMessages": 92, "avgMessages": 1.1794871794871795, "estimatedRealViewers": 78, "estimatedBotViewers": 6458, "chatToViewerRatio": 0.0119},
+  {"timestamp": "Jun 02 08:51 PM", "concurrentViewers": 6577, "uniqueChatters": 69, "totalMessages": 91, "avgMessages": 1.318840579710145, "estimatedRealViewers": 69, "estimatedBotViewers": 6508, "chatToViewerRatio": 0.0105},
+  {"timestamp": "Jun 02 08:52 PM", "concurrentViewers": 6485, "uniqueChatters": 69, "totalMessages": 77, "avgMessages": 1.1159420289855073, "estimatedRealViewers": 69, "estimatedBotViewers": 6416, "chatToViewerRatio": 0.0106},
+  {"timestamp": "Jun 02 08:54 PM", "concurrentViewers": 6462, "uniqueChatters": 69, "totalMessages": 79, "avgMessages": 1.144927536231884, "estimatedRealViewers": 69, "estimatedBotViewers": 6393, "chatToViewerRatio": 0.0107},
+  {"timestamp": "Jun 02 08:55 PM", "concurrentViewers": 6320, "uniqueChatters": 71, "totalMessages": 79, "avgMessages": 1.1126760563380282, "estimatedRealViewers": 71, "estimatedBotViewers": 6249, "chatToViewerRatio": 0.0112},
+  {"timestamp": "Jun 02 08:57 PM", "concurrentViewers": 6314, "uniqueChatters": 73, "totalMessages": 95, "avgMessages": 1.3013698630136987, "estimatedRealViewers": 73, "estimatedBotViewers": 6241, "chatToViewerRatio": 0.0116}
 ]
