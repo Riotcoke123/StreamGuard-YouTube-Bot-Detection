@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
+
+  <img src="https://github.com/user-attachments/assets/9b799fbc-9f8a-4d5b-ad7c-8cacdb254da6">
   <h1>StreamGuard - YouTube Bot Detection</h1>
   <p>
     StreamGuard is a Python script designed to analyze YouTube live chat streams and estimate the number of real viewers versus potential bot accounts. 
