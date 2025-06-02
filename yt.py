@@ -11,8 +11,8 @@ from PIL import Image, ImageTk
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-API_KEY = 'API_KEY'
-CHANNEL_ID = 'UCoxFxZirbfLvy9tres71eSA'
+API_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+CHANNEL_ID = 'UCshCsg1YVKli8yBai-wa78w'
 CHAT_DURATION = 30
 INTERVAL = 60
 LOG_FILE = 'stream_analysis_log.json'
@@ -119,7 +119,7 @@ class LiveBotGUI:
 
         try:
             pepe_data = requests.get("https://i.ibb.co/RXn09Xj/pepe-hacker.png").content
-            pepe_img = Image.open(BytesIO(pepe_data)).resize((64, 64))
+            pepe_img = Image.open(BytesIO(pepe_data)).resize((140, 140))  # Updated size to 140x140
             self.pepe_photo = ImageTk.PhotoImage(pepe_img)
             pepe_label = Label(self.header, image=self.pepe_photo, bg='#1e1e1e')
             pepe_label.pack(side=TOP, pady=(0, 10))
@@ -139,9 +139,7 @@ class LiveBotGUI:
         scrollbar.pack(side=RIGHT, fill=Y)
         self.text_area.config(yscrollcommand=scrollbar.set)
 
-        # Start loading channel info in background
         threading.Thread(target=self.load_channel_image, daemon=True).start()
-        # Start updating data in background
         threading.Thread(target=self.update_data, daemon=True).start()
 
     def load_channel_image(self):
@@ -156,7 +154,6 @@ class LiveBotGUI:
                 img_data = requests.get(url).content
                 img = Image.open(BytesIO(img_data)).resize((48, 48))
                 photo = ImageTk.PhotoImage(img)
-                # Tkinter updates must be done on main thread:
                 self.root.after(0, lambda: self.profile_label.config(image=photo))
                 self.profile_label.image = photo
             except Exception as e:
@@ -168,8 +165,10 @@ class LiveBotGUI:
 
     def update_data(self):
         while True:
-            timestamp = datetime.now(timezone.utc).isoformat()
-            self.root.after(0, lambda: self.log(f"[{timestamp}] Starting analysis..."))
+            pretty_timestamp = datetime.now().strftime("%b %d %I:%M %p")  # Changed format for GUI
+            iso_timestamp = datetime.now(timezone.utc).isoformat()        # Keep ISO for JSON logs
+
+            self.root.after(0, lambda: self.log(f"[{pretty_timestamp}] Starting analysis..."))
 
             video_id = get_live_stream_id()
             if not video_id:
@@ -187,7 +186,7 @@ class LiveBotGUI:
             estimates = estimate_bots(stats['concurrentViewers'], chat_stats)
 
             result = {
-                'timestamp': timestamp,
+                'timestamp': iso_timestamp,
                 'concurrentViewers': stats['concurrentViewers'],
                 **chat_stats,
                 **estimates
